@@ -1,88 +1,94 @@
 # 🎧 Podcastify — Listen to Any Page
 
 A Chrome (Manifest V3) extension that extracts the main content of a webpage and
-reads it aloud as a podcast-style experience, with play / pause / resume / stop /
-skip controls and live highlighting of the spoken section.
+reads it aloud as a podcast-style experience: play / pause / resume / stop / skip,
+live highlighting of the spoken section, and **click-to-play a single section**.
 
-## Why these choices
+Built with **React 19 + TypeScript (strict) + Tailwind + Vite (CRXJS)**, organized
+with Atomic Design. The legacy vanilla-JS build is preserved under [`legacy/`](legacy/).
+
+## Quick start
+
+```bash
+nvm use            # Node 24 (see .nvmrc)
+pnpm install
+pnpm build         # tsc --noEmit && vite build  →  dist/
+# then: chrome://extensions → Developer mode → Load unpacked → select dist/
+pnpm dev           # HMR build into dist/ while developing
+pnpm typecheck     # strict tsc, no emit
+pnpm lint          # eslint (type-aware), 0 warnings allowed
+```
+
+## Architecture — React only where it earns its place
+
+A deliberate decision: **the content script and service worker are plain typed
+TS modules, not React.** Imperative DOM extraction/highlighting and a background
+state machine gain nothing from React and would only pay bundle cost. React +
+Tailwind power the **Popup** UI alone.
+
+```
+Popup (React)  ⇄  Service Worker (brain: state machine + queue + TTS)  ⇄  Content Script (TS)
+                              │
+                              └─ Offscreen document (speechSynthesis fallback)
+```
 
 | Decision | Reason |
 | --- | --- |
-| **`chrome.tts` in the service worker** (not `speechSynthesis` in a page) | `speechSynthesis` lives on `window` and dies on navigation / tab switch / SPA re-render, and can't be driven from a popup. `chrome.tts` runs in the browser process, survives navigation, and emits `word`/`sentence` boundary events for highlighting. |
-| **`speechSynthesis` fallback via an offscreen document** | Used only when `chrome.tts` reports zero voices (some Linux/ChromeOS setups). A worker has no `window`, so the fallback needs an offscreen host. |
-| **Readability.js for extraction** | Battle-tested article-detection (Firefox Reader View). We run it on a *clone*, use it to locate the live article container, then walk the live DOM to attach highlightable ids. |
-| **Service worker is the single source of truth** | The popup is destroyed on close and the content script dies on navigation. Playback state lives in the worker, mirrored to `chrome.storage.session` to survive MV3 worker eviction. |
-| **`activeTab` + on-demand injection** (no `<all_urls>`) | Minimal-permission footprint; nothing runs on pages the user never activates. |
+| **Typed message contract** (`src/types/messages.ts`) | Every cross-context message is a member of a discriminated union keyed by `type`. `switch (msg.type)` is exhaustively checked; a wrong payload is a compile error. Imported by every surface — no more duplicated `MSG` maps. |
+| **Chrome API wrappers** (`src/lib/chrome`) | The only place `chrome.*` is touched. Everything depends on these abstractions (Dependency Inversion), so engines/storage are swappable and testable. |
+| **`chrome.tts` over `speechSynthesis`** | Runs in the browser process — survives navigation/tab-switch and is driven from the worker. `speechSynthesis` (offscreen) is the fallback when no `chrome.tts` voices exist. |
+| **Worker is the single source of truth** | The popup is destroyed on close and the content script dies on navigation. State lives in the worker, mirrored to `chrome.storage.session` to survive MV3 eviction. |
+| **God-object split** | The legacy `PlaybackController` is now `PlaybackController` (state machine) composing `ChunkQueue`, `TtsEngine`, `TabMessenger`, `StateStore` — one responsibility each. |
+| **Zustand for the popup** | Popup mirrors worker snapshots and re-renders minimally via selector subscriptions; memoized atomic components skip unchanged props. |
+| **Passive content script on `http(s)`** | Declared statically but does nothing until messaged (removes the legacy injection dance and `scripting`/`activeTab`). Trade-off: broader host access than the legacy `activeTab` build — tighten later with `registerContentScripts` if desired. |
 
-## Architecture
-
-```
-Popup (remote control)  ⇄  Service Worker (brain: state + queue + TTS)  ⇄  Content Script (extract + highlight)
-                                         │
-                                         └─ Offscreen doc (speechSynthesis fallback)
-```
-
-- **Popup** holds no state — asks the worker for a snapshot, listens for pushes.
-- **Service worker** owns the `PlaybackController` (state machine + chunk queue) and the `TtsEngine`.
-- **Content script** is a classic script injected after `Readability.js`; extracts ordered blocks and paints the active one.
-
-## File structure
+## Folder structure (Atomic Design)
 
 ```
-manifest.json
 src/
-  background/   service-worker.js · PlaybackController.js · TtsEngine.js · stateStore.js
-  content/      content-script.js          (extractor + highlighter + SPA watcher)
-  popup/        popup.html · popup.css · popup.js
-  offscreen/    offscreen.html · offscreen.js   (speechSynthesis fallback)
-  shared/       messages.js · chunker.js · logger.js
-  vendor/       Readability.js              (@mozilla/readability)
-icons/          16 · 32 · 48 · 128
+  assets/                 static assets
+  components/
+    atoms/                Button, IconButton, Text, Slider, Select
+    molecules/            MediaControls, StatusBar, RangeField, VoiceSelect
+    organisms/            Header, PlayerPanel
+    templates/            PopupLayout
+  pages/Popup/            index.html · main.tsx · Popup.tsx (composition only)
+  hooks/                  usePlaybackInit, useVoices
+  services/               playbackService, voiceService (popup → worker API)
+  stores/                 playbackStore (Zustand)
+  lib/chrome/             typed wrappers: runtime, storage, tabs, tts, offscreen
+  background/             service worker: index + Controller/Queue/Tts/Store/Messenger
+  content-scripts/        index + extractor/highlighter/selection/spaWatcher/styles
+  offscreen/              speechSynthesis fallback host
+  utils/                  chunker, dom, logger, cn
+  constants/  types/      design tokens / domain + message + storage contracts
+  manifest/               typed MV3 manifest (CRXJS defineManifest)
+  styles/                 Tailwind entry + base layer
 ```
 
-## Load & run
+## Features
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode** (top right).
-3. Click **Load unpacked** and select this folder (`cm/`).
-4. Open any article, click the 🎧 toolbar icon, hit **▶ Play**.
-
-> Requires Chrome 116+ (offscreen API). The placeholder icons in `icons/` are
-> generated solid swatches — swap in real artwork before publishing.
-
-## Controls & features
-
-- Play / Pause / Resume / Stop
-- ⏮ / ⏭ skip by section (block)
-- **🎯 Pick a section** — arms hover-to-select on the page: every readable
-  paragraph gets a hover outline and the cursor becomes a pointer; clicking one
-  plays *only that section*. A floating hint shows "Esc to cancel". (▶ Play still
-  starts from section 1; a manual skip exits single-section mode.)
+- Play / Pause / Resume / Stop, ⏮ / ⏭ skip by section
+- **🎯 Pick a section** — hover-to-select on the page; click plays only that section
 - Live highlight + auto-scroll of the spoken section
-- Voice / speed / pitch selectors (persisted in `chrome.storage.local`)
-- **↻ Scan page again** — re-extract to pick up lazy-loaded / infinite-scroll content and append it to the queue
+- Voice / speed / pitch controls (persisted in `chrome.storage.local`)
+- ↻ Rescan for lazy-loaded / infinite-scroll content
 - Auto-stop on hard navigation, tab close, and SPA soft navigation
+- Chunked utterances (CJK-aware), worker-eviction rehydration, `speechSynthesis` fallback
 
-## Edge cases handled
+## Accessibility
 
-- No clear article → falls back to the largest visible content container, then `<body>`.
-- Very long content → chunked into ≤240-char utterances (engine limits + responsive events).
-- Multilingual → language from `<html lang>`; CJK-aware sentence splitting.
-- Duplicate / nav / ad / hidden nodes → dedup + tag/role/visibility filters.
-- Worker eviction → state rehydrated from session storage.
+Semantic HTML, `aria-label` required on every icon button by construction,
+`aria-live` status region, visible focus ring, full keyboard operability.
+
+## Tooling notes
+
+- `pnpm-workspace.yaml` allowlists esbuild's build script (pnpm v11 requirement).
+- Strict TypeScript: `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+  `noImplicitOverride`, unused locals/params, etc. `any` is an ESLint error.
 
 ## Future scope
 
-- Export audio (cloud neural TTS → `MediaRecorder` in the offscreen doc).
+- Word-level karaoke highlighting (the `HIGHLIGHT_WORD` path is already wired).
+- Options page for persisted defaults; export audio via cloud neural TTS.
 - Per-block language detection for mixed-language pages.
-- Word-level karaoke highlighting (boundary events are already wired).
-- Resume-from-section across visits; multi-tab listening playlist.
-
-## Updating Readability
-
-```
-curl -sSL -o src/vendor/Readability.js \
-  https://raw.githubusercontent.com/mozilla/readability/main/Readability.js
-```
-
-Licensed under Apache-2.0 (Mozilla).

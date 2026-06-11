@@ -1,0 +1,5 @@
+# pnpm v11 build-script approvals live here. esbuild's postinstall compiles/
+# links its native binary; allowing it lets `pnpm install` exit cleanly and
+# Vite run at full speed.
+allowBuilds:
+  esbuild: true

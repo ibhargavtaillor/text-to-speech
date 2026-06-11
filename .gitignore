@@ -1,12 +1,13 @@
 # Dependencies
 node_modules/
+# pnpm-lock.yaml is committed for reproducible installs
 package-lock.json
 yarn.lock
-pnpm-lock.yaml
 
-# Build / bundle output (if you add esbuild/rollup later)
+# Build / bundle output
 dist/
 build/
+.vite/
 *.zip          # packaged extension uploads
 
 # Logs & caches
