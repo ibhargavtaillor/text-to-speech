@@ -100,6 +100,14 @@ output { color: var(--fg); }
   cursor: pointer;
 }
 .link:hover { color: var(--fg); border-color: var(--muted); }
+.link.accent {
+  margin-top: 14px;
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.link.accent:hover { background: rgba(255, 213, 0, 0.1); color: var(--accent); }
 
 .error {
   margin: 10px 0 0;

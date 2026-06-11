@@ -26,6 +26,13 @@ function bindControls() {
   $('stop').onclick = async () => render(await send({ type: MSG.STOP }));
   $('next').onclick = async () => render(await send({ type: MSG.NEXT }));
   $('prev').onclick = async () => render(await send({ type: MSG.PREV }));
+  $('pick').onclick = async () => {
+    // Arm hover-to-select on the page, then close the popup so the user can
+    // interact with the page directly. Selection lives in the content script,
+    // independent of the popup's lifecycle.
+    await send({ type: MSG.ENTER_PICK, tabId });
+    window.close();
+  };
   $('rescan').onclick = async () => {
     const r = await send({ type: MSG.RESCAN });
     if (typeof r?.added === 'number') flashTitle(r.added ? `+${r.added} new sections` : 'No new content');

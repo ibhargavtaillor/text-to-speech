@@ -18,6 +18,7 @@ export class PlaybackController {
     this.queue = []; // [{ blockId, text }] flattened, chunked
     this.index = 0;
     this.status = 'idle'; // idle | playing | paused
+    this.limitToBlock = null; // when set, playback stops at the end of this block
     this.prefs = { ...DEFAULT_PREFS };
 
     this.tts = new TtsEngine({
@@ -41,7 +42,23 @@ export class PlaybackController {
     if (data.lang) this.prefs.lang = data.lang;
     this.queue = this._buildQueue(this.blocks);
     this.index = 0;
+    this.limitToBlock = null;
     await this._persist();
+  }
+
+  // Play a single section only (triggered by the user clicking a block on the
+  // page). Loads the full extraction so section numbers / highlighting stay
+  // correct, jumps to that block, and limits playback to it.
+  async playSection(tabId, data, blockId) {
+    await this.load(tabId, data); // resets queue + clears limit
+    const idx = this.queue.findIndex((q) => q.blockId === blockId);
+    if (idx < 0) return false;
+    this.index = idx;
+    this.limitToBlock = blockId;
+    this.status = 'playing';
+    this._speakCurrent();
+    this._broadcast();
+    return true;
   }
 
   // Append newly discovered blocks (lazy-load / infinite scroll rescan) without
@@ -89,6 +106,7 @@ export class PlaybackController {
     this.tts.stop();
     this.status = 'idle';
     this.index = 0;
+    this.limitToBlock = null; // back to full-document mode
     this._sendToTab(MSG.CLEAR_HIGHLIGHT);
     this._broadcast();
   }
@@ -126,6 +144,10 @@ export class PlaybackController {
     if (this.status !== 'playing') return; // ignore stray end events after stop/pause
     this.index += 1;
     if (this.index >= this.queue.length) return this.stop();
+    // Single-section mode: stop once we cross into a different block.
+    if (this.limitToBlock && this.queue[this.index].blockId !== this.limitToBlock) {
+      return this.stop();
+    }
     this._speakCurrent();
     this._broadcast();
   }
@@ -133,6 +155,7 @@ export class PlaybackController {
   // Move to the first chunk of the next/previous *block* (a "section skip").
   _jumpToBlockBoundary(dir) {
     if (!this.queue.length) return;
+    this.limitToBlock = null; // manual skip exits single-section mode
     const curBlock = this.queue[this.index]?.blockId;
 
     let target = null;
@@ -208,6 +231,7 @@ export class PlaybackController {
       queue: this.queue,
       index: this.index,
       status: this.status,
+      limitToBlock: this.limitToBlock,
       prefs: this.prefs,
     });
   }
@@ -223,6 +247,7 @@ export class PlaybackController {
     this.blocks = state.blocks || [];
     this.queue = state.queue || [];
     this.index = state.index || 0;
+    this.limitToBlock = state.limitToBlock || null;
     this.prefs = { ...DEFAULT_PREFS, ...(state.prefs || {}) };
     // If audio was mid-play before eviction we can't reliably reattach the
     // event stream, so present as paused and let the user resume.

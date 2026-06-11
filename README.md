@@ -54,6 +54,10 @@ icons/          16 · 32 · 48 · 128
 
 - Play / Pause / Resume / Stop
 - ⏮ / ⏭ skip by section (block)
+- **🎯 Pick a section** — arms hover-to-select on the page: every readable
+  paragraph gets a hover outline and the cursor becomes a pointer; clicking one
+  plays *only that section*. A floating hint shows "Esc to cancel". (▶ Play still
+  starts from section 1; a manual skip exits single-section mode.)
 - Live highlight + auto-scroll of the spoken section
 - Voice / speed / pitch selectors (persisted in `chrome.storage.local`)
 - **↻ Scan page again** — re-extract to pick up lazy-loaded / infinite-scroll content and append it to the queue

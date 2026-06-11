@@ -15,15 +15,19 @@ export const MSG = {
   RESCAN: 'RESCAN',
   SET_PREFS: 'SET_PREFS',
   GET_STATE: 'GET_STATE',
+  ENTER_PICK: 'ENTER_PICK', // arm hover-to-select on the page
 
   // service worker -> content script
   EXTRACT: 'EXTRACT',
   HIGHLIGHT_BLOCK: 'HIGHLIGHT_BLOCK',
   HIGHLIGHT_WORD: 'HIGHLIGHT_WORD',
   CLEAR_HIGHLIGHT: 'CLEAR_HIGHLIGHT',
+  ENABLE_SELECTION: 'ENABLE_SELECTION',
+  DISABLE_SELECTION: 'DISABLE_SELECTION',
 
-  // content script -> service worker (soft navigation in an SPA)
-  SPA_NAVIGATED: 'SPA_NAVIGATED',
+  // content script -> service worker
+  SPA_NAVIGATED: 'SPA_NAVIGATED', // soft navigation in an SPA
+  SECTION_PICKED: 'SECTION_PICKED', // user clicked a section to play
 
   // service worker -> popup (broadcast)
   STATE: 'STATE',

@@ -48,6 +48,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           break;
         }
 
+        case MSG.ENTER_PICK: {
+          // Arm hover-to-select on the page without starting playback.
+          await injectContentScript(msg.tabId);
+          await chrome.tabs
+            .sendMessage(msg.tabId, { type: MSG.ENABLE_SELECTION })
+            .catch(() => {});
+          sendResponse(controller.snapshot());
+          break;
+        }
+
+        case MSG.SECTION_PICKED: {
+          // Fired by the content script when the user clicks a section.
+          const tabId = sender.tab?.id;
+          if (tabId == null || !msg.data?.blocks?.length) {
+            sendResponse(controller.snapshot());
+            break;
+          }
+          await controller.playSection(tabId, msg.data, msg.blockId);
+          sendResponse(controller.snapshot());
+          break;
+        }
+
         case MSG.PLAY: controller.play(); sendResponse(controller.snapshot()); break;
         case MSG.PAUSE: controller.pause(); sendResponse(controller.snapshot()); break;
         case MSG.RESUME: controller.resume(); sendResponse(controller.snapshot()); break;

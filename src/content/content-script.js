@@ -21,7 +21,10 @@
     HIGHLIGHT_BLOCK: 'HIGHLIGHT_BLOCK',
     HIGHLIGHT_WORD: 'HIGHLIGHT_WORD',
     CLEAR_HIGHLIGHT: 'CLEAR_HIGHLIGHT',
+    ENABLE_SELECTION: 'ENABLE_SELECTION',
+    DISABLE_SELECTION: 'DISABLE_SELECTION',
     SPA_NAVIGATED: 'SPA_NAVIGATED',
+    SECTION_PICKED: 'SECTION_PICKED',
   };
 
   const DATA_ATTR = 'data-podcastify-id';
@@ -171,6 +174,27 @@
         box-shadow: 0 0 0 2px rgba(255, 213, 0, 0.55) !important;
         border-radius: 3px !important;
         transition: background 0.2s ease !important;
+      }
+      /* hover-to-select mode */
+      html.podcastify-picking, html.podcastify-picking * { cursor: pointer !important; }
+      .podcastify-pick-hover {
+        outline: 2px solid rgba(255, 213, 0, 0.95) !important;
+        outline-offset: 2px !important;
+        background: rgba(255, 213, 0, 0.14) !important;
+        border-radius: 4px !important;
+        transition: background 0.12s ease, outline-color 0.12s ease !important;
+      }
+      #podcastify-hint {
+        position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+        z-index: 2147483647; display: flex; gap: 10px; align-items: center;
+        background: #16181d; color: #ffd500; cursor: pointer; user-select: none;
+        font: 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 10px 16px; border-radius: 999px; border: 1px solid #2c2f37;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+      }
+      #podcastify-hint .pc-esc {
+        color: #9aa0a6; font-size: 11px; padding-left: 10px;
+        border-left: 1px solid #2c2f37;
       }`;
     (document.head || document.documentElement).appendChild(style);
   }
@@ -203,6 +227,7 @@
       if (now === lastPath) return;
       lastPath = now;
       clearHighlight();
+      disableSelection();
       try {
         chrome.runtime.sendMessage({ type: MSG.SPA_NAVIGATED, url: location.href });
       } catch (_) {}
@@ -228,6 +253,93 @@
   }
 
   // ---------------------------------------------------------------------------
+  // SECTION PICK  (hover-to-select)
+  //
+  // When armed, every readable block gets a hover outline and the cursor turns
+  // into a pointer. Clicking a block tells the worker to play THAT section only.
+  // Click is intercepted in the capture phase so we never follow page links.
+  // ---------------------------------------------------------------------------
+
+  let selectionMode = false;
+  let hoverEl = null;
+  let lastExtraction = null;
+  let hintEl = null;
+
+  function enableSelection() {
+    if (selectionMode) return;
+    // Tag every readable block so it's hoverable, and remember the extraction so
+    // the worker can build a queue when a section is picked.
+    lastExtraction = extractBlocks();
+    if (!lastExtraction.blocks.length) {
+      flashHint('No readable sections found');
+      return;
+    }
+    selectionMode = true;
+    document.documentElement.classList.add('podcastify-picking');
+    document.addEventListener('mouseover', onPickOver, true);
+    document.addEventListener('click', onPickClick, true);
+    document.addEventListener('keydown', onPickKey, true);
+    showHint('🎯 Click a section to listen');
+  }
+
+  function disableSelection() {
+    if (!selectionMode) return;
+    selectionMode = false;
+    document.documentElement.classList.remove('podcastify-picking');
+    document.removeEventListener('mouseover', onPickOver, true);
+    document.removeEventListener('click', onPickClick, true);
+    document.removeEventListener('keydown', onPickKey, true);
+    if (hoverEl) hoverEl.classList.remove('podcastify-pick-hover');
+    hoverEl = null;
+    hideHint();
+  }
+
+  function onPickOver(e) {
+    const el = e.target.closest ? e.target.closest(`[${DATA_ATTR}]`) : null;
+    if (el === hoverEl) return;
+    if (hoverEl) hoverEl.classList.remove('podcastify-pick-hover');
+    hoverEl = el;
+    if (hoverEl) hoverEl.classList.add('podcastify-pick-hover');
+  }
+
+  function onPickClick(e) {
+    const el = e.target.closest ? e.target.closest(`[${DATA_ATTR}]`) : null;
+    if (!el) return;
+    e.preventDefault();   // don't follow links / activate page controls
+    e.stopPropagation();
+    const blockId = el.getAttribute(DATA_ATTR);
+    try {
+      chrome.runtime.sendMessage({ type: MSG.SECTION_PICKED, blockId, data: lastExtraction });
+    } catch (_) {}
+    disableSelection();
+  }
+
+  function onPickKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); disableSelection(); }
+  }
+
+  function showHint(text) {
+    if (!hintEl) {
+      hintEl = document.createElement('div');
+      hintEl.id = 'podcastify-hint';
+      hintEl.addEventListener('click', disableSelection, { capture: true });
+      (document.body || document.documentElement).appendChild(hintEl);
+    }
+    hintEl.innerHTML = `${text} <span class="pc-esc">Esc to cancel</span>`;
+  }
+
+  function hideHint() {
+    if (hintEl) hintEl.remove();
+    hintEl = null;
+  }
+
+  // Transient toast (used when there's nothing to pick).
+  function flashHint(text) {
+    showHint(text);
+    setTimeout(hideHint, 1600);
+  }
+
+  // ---------------------------------------------------------------------------
   // MESSAGE HANDLER
   // ---------------------------------------------------------------------------
 
@@ -250,6 +362,14 @@
 
       case MSG.CLEAR_HIGHLIGHT:
         clearHighlight();
+        break;
+
+      case MSG.ENABLE_SELECTION:
+        enableSelection();
+        break;
+
+      case MSG.DISABLE_SELECTION:
+        disableSelection();
         break;
     }
   });
