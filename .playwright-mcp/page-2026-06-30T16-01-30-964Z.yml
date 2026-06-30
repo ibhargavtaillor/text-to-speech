@@ -1,0 +1,88 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "ॐ Japinity" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: ॐ
+        - text: Japinity
+      - link "English" [ref=e7] [cursor=pointer]:
+        - /url: /en/aarti/ganga-aarti
+      - navigation "Primary" [ref=e8]:
+        - link "मुख्य पृष्ठ" [ref=e9] [cursor=pointer]:
+          - /url: /
+        - button "दैनिक" [ref=e11] [cursor=pointer]:
+          - text: दैनिक
+          - generic [ref=e12]: ▾
+        - button "पाठ" [ref=e14] [cursor=pointer]:
+          - text: पाठ
+          - generic [ref=e15]: ▾
+        - button "व्रत व पर्व" [ref=e17] [cursor=pointer]:
+          - text: व्रत व पर्व
+          - generic [ref=e18]: ▾
+        - button "कथा-परंपरा" [ref=e20] [cursor=pointer]:
+          - text: कथा-परंपरा
+          - generic [ref=e21]: ▾
+  - main [ref=e22]:
+    - article [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]: ॐ
+        - paragraph [ref=e27]: गंगा माँ
+        - heading "गंगा आरती – ॐ जय गंगे माता (बोल और अर्थ)" [level=1] [ref=e28]
+        - paragraph [ref=e29]: ॐ जय गंगे माता गंगा आरती के बोल हिंदी में अर्थ सहित। माँ गंगा की पवित्र आरती, जो स्नान, पूजा और गंगा दशहरा पर गाई जाती है।
+        - button "सुनें" [ref=e30] [cursor=pointer]:
+          - generic [ref=e31]: 🔊
+          - generic [ref=e32]: सुनें
+      - generic [ref=e33]:
+        - heading "बोल" [level=2] [ref=e34]
+        - generic [ref=e35]: ॐ जय गंगे माता, मैया जय गंगे माता। जो नर तुमको ध्याता, मनवांछित फल पाता॥ ॐ जय गंगे माता॥ चन्द्र-सी ज्योति तुम्हारी, जल निर्मल आता। शरण पड़े जो तेरी, सो नर तर जाता॥ ॐ जय गंगे माता॥ पुत्र सगर के तारे, सब जग को ज्ञाता। कृपा दृष्टि हो तुम्हारी, त्रिभुवन सुखदाता॥ ॐ जय गंगे माता॥ एक ही बार जो तेरी, शरणागति आता। यम की त्रास मिटाकर, परमगति पाता॥ ॐ जय गंगे माता॥ आरती मातु तुम्हारी, जो जन नित गाता। दास वही सहज में, मुक्ति को पाता॥ ॐ जय गंगे माता॥
+      - generic [ref=e36]:
+        - heading "अर्थ" [level=2] [ref=e37]
+        - paragraph [ref=e38]: इस आरती में भक्त माँ गंगा की वंदना करता है, जिनका जल निर्मल और पवित्र है। जो उनका ध्यान करता और शरण में आता है, वह संसार-सागर से तर जाता है और परमगति प्राप्त करता है। गंगा को मोक्षदायिनी और त्रिभुवन को सुख देने वाली कहा गया है।
+      - generic [ref=e39]:
+        - heading "लाभ" [level=2] [ref=e40]
+        - paragraph [ref=e41]: गंगा आरती का गायन मन को शुद्ध और शांत करता है, पापों के नाश और पुण्य की प्राप्ति का भाव जगाता है, तथा श्रद्धा व भक्ति बढ़ाता है। स्नान और पूजा के समय इसका गायन शुभ माना जाता है।
+      - generic [ref=e42]:
+        - heading "कब पढ़ें" [level=2] [ref=e43]
+        - paragraph [ref=e44]: गंगा स्नान, संध्या-पूजा और विशेषकर गंगा दशहरा व कार्तिक पूर्णिमा पर इसका गायन शुभ है। दीप जलाकर माँ गंगा की आरती करें।
+      - generic [ref=e45]:
+        - heading "अक्सर पूछे जाने वाले प्रश्न" [level=2] [ref=e46]
+        - group [ref=e47]:
+          - generic "गंगा आरती के मुख्य बोल क्या हैं?" [ref=e48] [cursor=pointer]
+        - group [ref=e49]:
+          - generic "गंगा आरती कब गाई जाती है?" [ref=e50] [cursor=pointer]
+      - generic [ref=e51]:
+        - generic [ref=e52]: "शेयर करें:"
+        - button "शेयर करें" [ref=e53] [cursor=pointer]: 📲 शेयर करें
+        - link "शेयर करें WhatsApp" [ref=e54] [cursor=pointer]:
+          - /url: https://wa.me/?text=%E0%A4%97%E0%A4%82%E0%A4%97%E0%A4%BE%20%E0%A4%86%E0%A4%B0%E0%A4%A4%E0%A5%80%20%E2%80%93%20%E0%A5%90%20%E0%A4%9C%E0%A4%AF%20%E0%A4%97%E0%A4%82%E0%A4%97%E0%A5%87%20%E0%A4%AE%E0%A4%BE%E0%A4%A4%E0%A4%BE%20(%E0%A4%AC%E0%A5%8B%E0%A4%B2%20%E0%A4%94%E0%A4%B0%20%E0%A4%85%E0%A4%B0%E0%A5%8D%E0%A4%A5)%20%E2%80%94%20https%3A%2F%2Fjapinity.com%2Faarti%2Fganga-aarti%2F
+          - text: WhatsApp
+        - link "शेयर करें Telegram" [ref=e55] [cursor=pointer]:
+          - /url: https://t.me/share/url?url=https%3A%2F%2Fjapinity.com%2Faarti%2Fganga-aarti%2F&text=%E0%A4%97%E0%A4%82%E0%A4%97%E0%A4%BE%20%E0%A4%86%E0%A4%B0%E0%A4%A4%E0%A5%80%20%E2%80%93%20%E0%A5%90%20%E0%A4%9C%E0%A4%AF%20%E0%A4%97%E0%A4%82%E0%A4%97%E0%A5%87%20%E0%A4%AE%E0%A4%BE%E0%A4%A4%E0%A4%BE%20(%E0%A4%AC%E0%A5%8B%E0%A4%B2%20%E0%A4%94%E0%A4%B0%20%E0%A4%85%E0%A4%B0%E0%A5%8D%E0%A4%A5)
+          - text: Telegram
+        - link "शेयर करें Facebook" [ref=e56] [cursor=pointer]:
+          - /url: https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fjapinity.com%2Faarti%2Fganga-aarti%2F
+          - text: Facebook
+        - link "शेयर करें X" [ref=e57] [cursor=pointer]:
+          - /url: https://twitter.com/intent/tweet?url=https%3A%2F%2Fjapinity.com%2Faarti%2Fganga-aarti%2F&text=%E0%A4%97%E0%A4%82%E0%A4%97%E0%A4%BE%20%E0%A4%86%E0%A4%B0%E0%A4%A4%E0%A5%80%20%E2%80%93%20%E0%A5%90%20%E0%A4%9C%E0%A4%AF%20%E0%A4%97%E0%A4%82%E0%A4%97%E0%A5%87%20%E0%A4%AE%E0%A4%BE%E0%A4%A4%E0%A4%BE%20(%E0%A4%AC%E0%A5%8B%E0%A4%B2%20%E0%A4%94%E0%A4%B0%20%E0%A4%85%E0%A4%B0%E0%A5%8D%E0%A4%A5)
+          - text: X
+        - button "लिंक कॉपी करें" [ref=e58] [cursor=pointer]
+  - contentinfo [ref=e59]:
+    - generic [ref=e60]:
+      - navigation "Footer" [ref=e61]:
+        - link "हमारे बारे में" [ref=e62] [cursor=pointer]:
+          - /url: /about
+        - link "संपर्क करें" [ref=e63] [cursor=pointer]:
+          - /url: /contact
+        - link "गोपनीयता नीति" [ref=e64] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "नियम और शर्तें" [ref=e65] [cursor=pointer]:
+          - /url: /terms
+        - link "करियर" [ref=e66] [cursor=pointer]:
+          - /url: /career
+      - navigation "Social" [ref=e67]:
+        - link "YouTube" [ref=e68] [cursor=pointer]:
+          - /url: https://www.youtube.com/@japinity
+      - paragraph [ref=e69]:
+        - link "♥ सहयोग करें" [ref=e70] [cursor=pointer]:
+          - /url: https://razorpay.me/@japinity
+      - paragraph [ref=e71]: © 2026 Japinity. आरती, चालीसा, मंत्र और भक्ति कथाएँ.

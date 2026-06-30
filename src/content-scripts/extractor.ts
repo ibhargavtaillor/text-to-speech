@@ -11,6 +11,17 @@ const SKIP_ROLES = new Set([
 ]);
 const LEAF_RE = /^(P|H1|H2|H3|H4|H5|H6|LI|BLOCKQUOTE|FIGCAPTION|TD|DD|DT|PRE)$/;
 
+// Block-level containers that often hold text DIRECTLY on CMS/template sites
+// (lyrics, verses, cards) instead of wrapping it in <p>. Without this, such
+// content is invisible to extraction and section-pick.
+const TEXT_CONTAINER_RE = /^(DIV|SECTION|ARTICLE|MAIN)$/;
+
+// Any block-level descendant. A text container with NONE of these is a "leaf
+// container": its own text is a single block, with no nested blocks to
+// double-read. Inline children (span/a/strong/…) are intentionally excluded.
+const BLOCK_DESCENDANT_SELECTOR =
+  'p,h1,h2,h3,h4,h5,h6,li,blockquote,figcaption,td,dd,dt,pre,div,section,article,main,ul,ol,table';
+
 /**
  * Extract main content as ordered, highlightable blocks.
  *
@@ -57,7 +68,14 @@ function nodeFilter(node: Node): number {
   if (role && SKIP_ROLES.has(role)) return NodeFilter.FILTER_REJECT;
   if (el.getAttribute('aria-hidden') === 'true') return NodeFilter.FILTER_REJECT;
   if (!isVisible(el)) return NodeFilter.FILTER_REJECT;
-  return LEAF_RE.test(el.tagName) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+
+  if (LEAF_RE.test(el.tagName)) return NodeFilter.FILTER_ACCEPT;
+  // Accept a container only when it holds text directly with no block-level
+  // descendants (so we never swallow nested blocks or double-read them).
+  if (TEXT_CONTAINER_RE.test(el.tagName) && !el.querySelector(BLOCK_DESCENDANT_SELECTOR)) {
+    return NodeFilter.FILTER_ACCEPT;
+  }
+  return NodeFilter.FILTER_SKIP;
 }
 
 function locateArticleRoot(): Element | null {
