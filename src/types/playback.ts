@@ -25,6 +25,12 @@ export interface SpeechPrefs {
   lang: string;
 }
 
+/** A user-facing notice surfaced from the worker (e.g. missing voice, TTS failure). */
+export interface PlaybackNotice {
+  readonly level: 'warn' | 'error';
+  readonly message: string;
+}
+
 /** Immutable projection of worker state that the popup renders. */
 export interface PlaybackSnapshot {
   readonly status: PlaybackStatus;
@@ -35,6 +41,8 @@ export interface PlaybackSnapshot {
   readonly section: number;
   readonly total: number;
   readonly prefs: SpeechPrefs;
+  /** Non-fatal warning or fatal error to show the user; null when all is well. */
+  readonly notice: PlaybackNotice | null;
 }
 
 /** A single TTS utterance plus the block it belongs to (for highlighting). */

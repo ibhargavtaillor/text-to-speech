@@ -4,17 +4,23 @@ import { TabMessenger } from './TabMessenger';
 import { StateStore } from './StateStore';
 import { emit } from '@/lib/chrome/runtime';
 import { logger } from '@/utils/logger';
+import { selectVoiceName, type VoiceInfo } from '@/utils/voice';
+import { languageName } from '@/utils/language';
 import { DEFAULT_PREFS } from '@/constants';
 import { MessageType } from '@/types';
 import type {
   ContentBlock,
   ExtractionResult,
   OffscreenEvent,
+  PlaybackNotice,
   PlaybackSnapshot,
   PlaybackStatus,
   SessionState,
   SpeechPrefs,
 } from '@/types';
+
+/** Stop and warn the user after this many back-to-back TTS failures. */
+const MAX_CONSECUTIVE_TTS_ERRORS = 2;
 
 /**
  * The brain. Owns the playback state machine and coordinates the queue, the TTS
@@ -37,6 +43,11 @@ export class PlaybackController {
   private status: PlaybackStatus = 'idle';
   private limitToBlock: string | null = null;
   private prefs: SpeechPrefs = { ...DEFAULT_PREFS };
+
+  /** User-facing notice (missing voice / playback failure); null when fine. */
+  private notice: PlaybackNotice | null = null;
+  /** Consecutive TTS errors with no successful speech in between. */
+  private consecutiveErrors = 0;
 
   getVoices(): Promise<chrome.tts.TtsVoice[]> {
     return this.engine.getVoices();
@@ -64,10 +75,41 @@ export class PlaybackController {
     this.url = data.url;
     this.title = data.title;
     this.blocks = data.blocks;
-    if (data.lang) this.prefs.lang = data.lang;
+    this.notice = null; // fresh page — clear any stale notice
+    if (data.lang) {
+      this.prefs.lang = data.lang;
+      await this.autoSelectVoice(data.lang);
+    }
     this.queue.reset(this.blocks);
     this.limitToBlock = null;
     await this.persist();
+  }
+
+  /**
+   * Match the voice to the page's detected language so a Hindi page is read by a
+   * Hindi voice, Gujarati by a Gujarati voice, etc. Runs on every fresh load; a
+   * manual pick from the popup overrides until the next page is loaded. Clears
+   * the voice when no match exists, letting chrome.tts fall back via `lang`.
+   */
+  private async autoSelectVoice(lang: string): Promise<void> {
+    const voices = await this.engine.getVoices();
+    const infos: VoiceInfo[] = voices
+      .filter((v): v is chrome.tts.TtsVoice & { voiceName: string; lang: string } =>
+        Boolean(v.voiceName && v.lang),
+      )
+      .map((v) => ({ name: v.voiceName, lang: v.lang }));
+
+    const matched = selectVoiceName(infos, lang);
+    this.prefs.voiceName = matched;
+
+    // Proactive warning: voices exist, but none for the page's language. The
+    // text will be read by the default voice and likely mispronounced.
+    if (!matched && infos.length > 0) {
+      this.notice = {
+        level: 'warn',
+        message: `No ${languageName(lang)} voice is installed on this device. Using the default voice — pronunciation may be off.`,
+      };
+    }
   }
 
   /** Append lazily-loaded content; returns how many new blocks were added. */
@@ -85,9 +127,16 @@ export class PlaybackController {
   play(): void {
     if (this.status === 'paused') return this.resume();
     if (this.queue.length === 0) return;
+    this.beginFreshPlayback();
     this.status = 'playing';
     void this.speakCurrent();
     this.broadcast();
+  }
+
+  /** Reset the error guard and clear a prior fatal error on a new play attempt. */
+  private beginFreshPlayback(): void {
+    this.consecutiveErrors = 0;
+    if (this.notice?.level === 'error') this.notice = null;
   }
 
   pause(): void {
@@ -113,6 +162,27 @@ export class PlaybackController {
     this.broadcast();
   }
 
+  /**
+   * Fully unload the current page's content. Called when the controlled tab
+   * navigates away or closes — `stop()` alone would leave the previous page's
+   * title/sections in the snapshot, which the popup would then show on the new
+   * page.
+   */
+  reset(): void {
+    this.engine.stop();
+    this.tabId = null;
+    this.messenger.setTab(null);
+    this.url = null;
+    this.title = '';
+    this.blocks = [];
+    this.queue.reset([]);
+    this.status = 'idle';
+    this.limitToBlock = null;
+    this.notice = null;
+    this.consecutiveErrors = 0;
+    this.broadcast();
+  }
+
   skipNext(): void {
     this.jumpToBlockBoundary(1);
   }
@@ -128,6 +198,7 @@ export class PlaybackController {
     if (index < 0) return false;
     this.queue.setIndex(index);
     this.limitToBlock = blockId;
+    this.beginFreshPlayback();
     this.status = 'playing';
     void this.speakCurrent();
     this.broadcast();
@@ -136,6 +207,10 @@ export class PlaybackController {
 
   async setPrefs(patch: Partial<SpeechPrefs>): Promise<void> {
     this.prefs = { ...this.prefs, ...patch };
+    // A manual voice pick supersedes the auto-select "no voice" warning.
+    if (patch.voiceName !== undefined && this.notice?.level === 'warn') {
+      this.notice = null;
+    }
     await StateStore.savePrefs(this.prefs);
     if (this.status === 'playing') {
       this.engine.stop();
@@ -209,13 +284,29 @@ export class PlaybackController {
   }
 
   private onBoundary(charIndex: number): void {
+    this.consecutiveErrors = 0; // real audio is being produced
     const item = this.queue.current;
     if (item) this.messenger.highlightWord(item.blockId, charIndex);
   }
 
   private onError(message: string): void {
-    logger.warn('TTS error, skipping chunk:', message);
-    this.advance(); // resilience: drop the bad chunk, keep going
+    logger.warn('TTS error:', message);
+    this.consecutiveErrors += 1;
+
+    // One bad chunk → skip it and keep going (resilience). Repeated failures →
+    // the voice/language is unusable; stop and tell the user instead of
+    // silently racing through the queue to a dead stop.
+    if (this.consecutiveErrors >= MAX_CONSECUTIVE_TTS_ERRORS) {
+      this.consecutiveErrors = 0;
+      this.notice = {
+        level: 'error',
+        message:
+          'Could not play audio. The selected voice or language may not be supported by your browser.',
+      };
+      this.stop();
+      return;
+    }
+    this.advance();
   }
 
   // --- state projection / persistence ----------------------------------------
@@ -233,6 +324,7 @@ export class PlaybackController {
       section,
       total: this.blocks.length,
       prefs: this.prefs,
+      notice: this.notice,
     };
   }
 

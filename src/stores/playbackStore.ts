@@ -35,6 +35,7 @@ const EMPTY_SNAPSHOT: PlaybackSnapshot = {
   section: 0,
   total: 0,
   prefs: DEFAULT_PREFS,
+  notice: null,
 };
 
 export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
@@ -47,7 +48,15 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
     const tab = await getActiveTab();
     const activeTabId = tab?.id ?? null;
     const snapshot = await playbackService.getState();
-    set({ activeTabId, snapshot });
+
+    // Never show another tab's state. (Same-tab navigation is handled in the
+    // worker via tabs.onUpdated → reset; this guards the cross-tab case, where
+    // the tab id differs.) Keep the user's prefs so the controls stay populated.
+    const fresh =
+      snapshot.tabId === activeTabId
+        ? snapshot
+        : { ...EMPTY_SNAPSHOT, prefs: snapshot.prefs };
+    set({ activeTabId, snapshot: fresh });
 
     return onMessageType(MessageType.StateChanged, (message) => {
       set({ snapshot: message.snapshot });

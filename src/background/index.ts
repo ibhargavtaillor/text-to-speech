@@ -120,12 +120,13 @@ function controllerHandleOffscreen(
   controller.handleOffscreenEvent(msg);
 }
 
-// Stop on hard navigation / tab close of the source tab.
+// Hard navigation or tab close of the source tab → fully unload its content so
+// the popup never shows the previous page's title/sections on the new page.
 onTabUpdated((tabId, changeInfo) => {
   if (changeInfo.status === 'loading' && tabId === controller.currentTabId) {
-    controller.stop();
+    controller.reset();
   }
 });
 onTabRemoved((tabId) => {
-  if (tabId === controller.currentTabId) controller.stop();
+  if (tabId === controller.currentTabId) controller.reset();
 });

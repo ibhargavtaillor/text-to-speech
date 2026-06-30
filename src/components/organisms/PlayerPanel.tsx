@@ -5,6 +5,7 @@ import { MediaControls } from '@/components/molecules/MediaControls';
 import { StatusBar } from '@/components/molecules/StatusBar';
 import { RangeField } from '@/components/molecules/RangeField';
 import { VoiceSelect } from '@/components/molecules/VoiceSelect';
+import { cn } from '@/utils/cn';
 import { RATE, PITCH } from '@/constants';
 import type { PlaybackSnapshot } from '@/types';
 import type { Voice } from '@/services/voiceService';
@@ -47,7 +48,7 @@ export const PlayerPanel = memo(function PlayerPanel({
   onPitch,
   onVoice,
 }: PlayerPanelProps) {
-  const { status, title, section, total, prefs } = snapshot;
+  const { status, title, section, total, prefs, notice } = snapshot;
 
   return (
     <div className="flex flex-col gap-3">
@@ -103,6 +104,21 @@ export const PlayerPanel = memo(function PlayerPanel({
       {error === 'NO_CONTENT' && (
         <Text as="p" tone="danger" size="sm" role="alert" className="rounded-md bg-danger/10 p-2">
           Could not find readable content on this page.
+        </Text>
+      )}
+
+      {notice && (
+        <Text
+          as="p"
+          size="sm"
+          tone={notice.level === 'error' ? 'danger' : 'accent'}
+          role={notice.level === 'error' ? 'alert' : 'status'}
+          className={cn(
+            'rounded-md p-2',
+            notice.level === 'error' ? 'bg-danger/10' : 'bg-accent/10',
+          )}
+        >
+          {notice.message}
         </Text>
       )}
     </div>

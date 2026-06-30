@@ -1,6 +1,7 @@
 import { Readability } from '@mozilla/readability';
 import { BLOCK_ATTR, MIN_BLOCK_CHARS } from '@/constants';
 import { isVisible, normalizeText } from '@/utils/dom';
+import { detectScriptLang } from '@/utils/language';
 import type { ContentBlock, ExtractionResult } from '@/types';
 
 const SKIP_TAGS = new Set([
@@ -58,7 +59,7 @@ export function extractBlocks(): ExtractionResult {
     blocks.push({ id, text, charCount: text.length });
   }
 
-  return { title: getTitle(), url: location.href, lang: detectLang(), blocks };
+  return { title: getTitle(), url: location.href, lang: detectLang(blocks), blocks };
 }
 
 function nodeFilter(node: Node): number {
@@ -127,8 +128,18 @@ function getTitle(): string {
   return heading?.innerText?.trim() || document.title;
 }
 
-function detectLang(): string {
+// Prefer the actual content's script (reliable for Hindi/Gujarati/etc.) over the
+// declared lang, which is frequently wrong. Fall back to <html lang> for
+// Latin-script pages where script can't disambiguate the language.
+function detectLang(blocks: ContentBlock[]): string {
+  const sample = blocks
+    .slice(0, 12)
+    .map((b) => b.text)
+    .join(' ')
+    .slice(0, 2000);
+
   return (
+    detectScriptLang(sample) ||
     document.documentElement.getAttribute('lang') ||
     document.querySelector('[lang]')?.getAttribute('lang') ||
     'en-US'
